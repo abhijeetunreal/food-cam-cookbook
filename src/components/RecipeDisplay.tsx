@@ -56,7 +56,7 @@ export function RecipeDisplay({ recipe, onSpeak, isSpeaking, canSpeak }: RecipeD
             size="icon"
             onClick={() => onSpeak(recipe.instructions.join('. '))}
             disabled={!canSpeak || isSpeaking}
-            title={canSpeak ? "Read instructions aloud" : "Enter ElevenLabs API key to enable speech"}
+            title={canSpeak ? "Read instructions aloud" : "Text-to-speech is not available on your browser"}
           >
             {isSpeaking ? (
               <LoaderCircle className="h-5 w-5 animate-spin" />

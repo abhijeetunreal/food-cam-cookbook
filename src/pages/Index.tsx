@@ -135,26 +135,56 @@ const Index = () => {
   };
 
   const handleSpeak = async (text: string) => {
-    if (!elevenLabsApiKey) {
-      setError("An ElevenLabs API key is required for Text-to-Speech.");
+    if (!elevenLabsApiKey && !('speechSynthesis' in window)) {
+      setError("Text-to-Speech is not available on your browser.");
       return;
     }
+    
     setIsSpeaking(true);
     setError(null);
-    try {
-      const audioBlob = await generateSpeech(text, elevenLabsApiKey);
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
-      audio.play();
-      audio.onended = () => {
+
+    if (elevenLabsApiKey) {
+      try {
+        const audioBlob = await generateSpeech(text, elevenLabsApiKey);
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        audio.play();
+        audio.onended = () => {
+          setIsSpeaking(false);
+          URL.revokeObjectURL(audioUrl);
+        };
+        audio.onerror = () => {
+          setError("Failed to play the generated speech.");
+          setIsSpeaking(false);
+        };
+      } catch (err: any) {
+        setError(err.message || "Failed to generate speech.");
         setIsSpeaking(false);
-        URL.revokeObjectURL(audioUrl);
+      }
+    } else {
+      // Use browser's built-in speech synthesis
+      const utterance = new SpeechSynthesisUtterance(text);
+      const langCodeMap: { [key: string]: string } = {
+        'English': 'en-US',
+        'Hindi': 'hi-IN',
+        'Italian': 'it-IT',
+        'Japanese': 'ja-JP',
       };
-    } catch (err: any) {
-      setError(err.message || "Failed to generate speech.");
-      setIsSpeaking(false);
+      utterance.lang = langCodeMap[selectedLanguage] || 'en-US';
+
+      utterance.onend = () => {
+        setIsSpeaking(false);
+      };
+      utterance.onerror = (event) => {
+        console.error('SpeechSynthesisUtterance.onerror', event);
+        setError('An error occurred during speech synthesis.');
+        setIsSpeaking(false);
+      };
+      window.speechSynthesis.speak(utterance);
     }
   };
+
+  const canSpeak = !!elevenLabsApiKey || ('speechSynthesis' in window && window.speechSynthesis !== undefined);
 
   if (showCamera) {
     return (
@@ -267,12 +297,12 @@ const Index = () => {
                   <Input
                     id="elevenlabs-api-key"
                     type="password"
-                    placeholder="For text-to-speech feature"
+                    placeholder="Optional, for higher quality voice"
                     value={elevenLabsApiKey}
                     onChange={handleElevenLabsApiKeyChange}
                     className="mt-2"
                   />
-                  <p className="text-xs text-muted-foreground mt-2">Your key is stored locally to enable voice features.</p>
+                  <p className="text-xs text-muted-foreground mt-2">A basic voice is available by default. Your key is stored locally.</p>
                 </div>
               </div>
             </motion.div>
@@ -330,9 +360,9 @@ const Index = () => {
                       <p className="mt-2 text-sm text-destructive-foreground">{error}</p>
                     </div>
                   ) : generatedRecipe ? (
-                    <RecipeDisplay recipe={generatedRecipe} onSpeak={handleSpeak} isSpeaking={isSpeaking} canSpeak={!!elevenLabsApiKey} />
+                    <RecipeDisplay recipe={generatedRecipe} onSpeak={handleSpeak} isSpeaking={isSpeaking} canSpeak={canSpeak} />
                   ) : (vegetables.some(v => v.id === selectedVegetable.id) && selectedVegetable.recipe) ? (
-                     <RecipeDisplay recipe={selectedVegetable.recipe} onSpeak={handleSpeak} isSpeaking={isSpeaking} canSpeak={!!elevenLabsApiKey} />
+                     <RecipeDisplay recipe={selectedVegetable.recipe} onSpeak={handleSpeak} isSpeaking={isSpeaking} canSpeak={canSpeak} />
                   ) : null}
                 </>
               )}
