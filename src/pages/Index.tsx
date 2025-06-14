@@ -1,13 +1,13 @@
-
 import { useState, useEffect } from 'react';
 import { vegetables, Vegetable } from '@/data/vegetables';
 import { RecipeDisplay } from '@/components/RecipeDisplay';
-import { ChefHat, X, LoaderCircle } from 'lucide-react';
+import { ChefHat, X, LoaderCircle, Camera } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { suggestRecipeStyles } from "@/lib/gemini";
 import { Button } from '@/components/ui/button';
+import { CameraScanner } from '@/components/CameraScanner';
 
 const Index = () => {
   const [selectedVegetable, setSelectedVegetable] = useState<Vegetable | null>(null);
@@ -16,6 +16,7 @@ const Index = () => {
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
 
   useEffect(() => {
     const storedApiKey = localStorage.getItem('gemini-api-key');
@@ -61,6 +62,26 @@ const Index = () => {
     setIsLoading(false);
   };
 
+  const handleIngredientFound = (ingredientName: string) => {
+    const foundVeg = vegetables.find(v => v.name.toLowerCase() === ingredientName.toLowerCase().trim());
+    setShowCamera(false);
+    if (foundVeg) {
+        handleSelectVegetable(foundVeg);
+    } else {
+        setError(`Sorry, we don't have recipes for '${ingredientName}'. Please try another one or select from the list.`);
+    }
+  };
+
+  if (showCamera) {
+    return (
+      <CameraScanner
+        apiKey={apiKey}
+        onCancel={() => setShowCamera(false)}
+        onIngredientFound={handleIngredientFound}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-secondary/50 font-sans text-foreground p-4 sm:p-6 md:p-8">
       <header className="text-center mb-8">
@@ -95,6 +116,9 @@ const Index = () => {
               className="max-w-2xl mx-auto text-center"
             >
               <h2 className="text-xl md:text-2xl font-bold text-gray-700 mb-6">What ingredient are you cooking with today?</h2>
+              {error && (
+                <motion.div initial={{opacity:0, y:-10}} animate={{opacity:1, y:0}} className="bg-destructive/10 text-destructive p-3 rounded-md mb-4 text-sm font-medium">{error}</motion.div>
+              )}
               <div className="grid grid-cols-3 gap-4">
                 {vegetables.map((veg, index) => (
                   <motion.button
@@ -110,6 +134,24 @@ const Index = () => {
                   </motion.button>
                 ))}
               </div>
+
+              <div className="my-8 flex items-center justify-center gap-4 text-sm">
+                <div className="flex-1 border-t border-muted"></div>
+                <span className="text-muted-foreground">OR</span>
+                <div className="flex-1 border-t border-muted"></div>
+              </div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3, delay: 0.1 * vegetables.length }}
+              >
+                <Button onClick={() => {setError(null); setShowCamera(true)}} variant="outline" className="w-full max-w-sm mx-auto">
+                    <Camera className="mr-2 h-5 w-5" />
+                    Scan Ingredient with Camera
+                </Button>
+              </motion.div>
+
               <div className="mt-8 max-w-sm mx-auto">
                 <Label htmlFor="api-key" className="text-sm font-medium text-gray-600">Google Gemini API Key</Label>
                 <Input
