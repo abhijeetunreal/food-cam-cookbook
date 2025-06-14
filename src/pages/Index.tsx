@@ -1,19 +1,64 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { vegetables, Vegetable } from '@/data/vegetables';
 import { RecipeDisplay } from '@/components/RecipeDisplay';
-import { ChefHat, X } from 'lucide-react';
+import { ChefHat, X, LoaderCircle } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { suggestRecipeStyles } from "@/lib/gemini";
+import { Button } from '@/components/ui/button';
 
 const Index = () => {
   const [selectedVegetable, setSelectedVegetable] = useState<Vegetable | null>(null);
+  const [apiKey, setApiKey] = useState('');
+  const [recipeStyles, setRecipeStyles] = useState<string[]>([]);
+  const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSelectVegetable = (veg: Vegetable) => {
+  useEffect(() => {
+    const storedApiKey = localStorage.getItem('gemini-api-key');
+    if (storedApiKey) {
+      setApiKey(storedApiKey);
+    }
+  }, []);
+
+  const handleApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newKey = e.target.value;
+    setApiKey(newKey);
+    localStorage.setItem('gemini-api-key', newKey);
+  };
+
+  const handleSelectVegetable = async (veg: Vegetable) => {
     setSelectedVegetable(veg);
+    setError(null);
+    setRecipeStyles([]);
+    setSelectedStyle(null);
+
+    if (!apiKey) {
+      console.log("No Gemini API key found. Showing default recipe.");
+      setSelectedStyle('default'); // Use a default style to show the recipe
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const styles = await suggestRecipeStyles(veg.name, apiKey);
+      setRecipeStyles(styles);
+    } catch (err: any) {
+      setError(err.message || 'An unknown error occurred.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleClear = () => {
     setSelectedVegetable(null);
+    setRecipeStyles([]);
+    setSelectedStyle(null);
+    setError(null);
+    setIsLoading(false);
   };
 
   return (
@@ -65,6 +110,18 @@ const Index = () => {
                   </motion.button>
                 ))}
               </div>
+              <div className="mt-8 max-w-sm mx-auto">
+                <Label htmlFor="api-key" className="text-sm font-medium text-gray-600">Google Gemini API Key</Label>
+                <Input
+                  id="api-key"
+                  type="password"
+                  placeholder="Enter your API key here"
+                  value={apiKey}
+                  onChange={handleApiKeyChange}
+                  className="mt-2"
+                />
+                <p className="text-xs text-muted-foreground mt-2">Your key is stored locally and used to suggest recipe styles.</p>
+              </div>
             </motion.div>
           ) : (
             <motion.div
@@ -73,8 +130,44 @@ const Index = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.5 }}
+              className="max-w-2xl mx-auto text-center"
             >
-              <RecipeDisplay recipe={selectedVegetable.recipe} />
+              {isLoading && (
+                <div className="flex flex-col items-center justify-center h-64">
+                  <LoaderCircle className="w-12 h-12 text-primary animate-spin" />
+                  <p className="mt-4 text-secondary-foreground">Asking the chef for ideas...</p>
+                </div>
+              )}
+              {error && (
+                <div className="flex flex-col items-center justify-center h-64 bg-destructive/10 rounded-lg p-4">
+                  <p className="text-destructive font-semibold">Oops! Something went wrong.</p>
+                  <p className="mt-2 text-sm text-destructive-foreground">{error}</p>
+                </div>
+              )}
+              {!isLoading && !error && recipeStyles.length > 0 && !selectedStyle && (
+                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                  <h2 className="text-xl md:text-2xl font-bold text-gray-700 mb-6">
+                    How should we cook the <span className="text-primary">{selectedVegetable.name}</span>?
+                  </h2>
+                  <div className="flex flex-wrap justify-center gap-4">
+                    {recipeStyles.map(style => (
+                      <motion.div
+                        key={style}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Button onClick={() => setSelectedStyle(style)} size="lg">
+                          {style}
+                        </Button>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+              {selectedStyle && (
+                 <RecipeDisplay recipe={selectedVegetable.recipe} />
+              )}
+              
               <div className="text-center mt-8">
                 <button
                   onClick={handleClear}
