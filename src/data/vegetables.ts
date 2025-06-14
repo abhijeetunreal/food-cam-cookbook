@@ -1,5 +1,5 @@
 
-import { LucideIcon, Carrot, Grape, Potato } from 'lucide-react';
+import { LucideIcon, Carrot, Grape, Circle } from 'lucide-react';
 
 export interface Vegetable {
   id: string;
@@ -43,7 +43,7 @@ export const vegetables: Vegetable[] = [
   {
     id: 'potato',
     name: 'Potato',
-    icon: Potato,
+    icon: Circle, // Using Circle as a stand-in for Potato
     recipe: {
       dish: 'Garlic Roasted Potatoes',
       description: 'Crispy on the outside, fluffy on the inside, these potatoes are a perfect side dish.',
