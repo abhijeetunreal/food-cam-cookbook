@@ -115,11 +115,6 @@ const Index = () => {
     setSelectedStyle(style);
     setError(null);
 
-    const isStaticVegetable = vegetables.some(v => v.id === selectedVegetable?.id);
-    if (isStaticVegetable) {
-      return; 
-    }
-
     if (!apiKey) {
       setError("A Google Gemini API key is required to generate recipes.");
       return;
@@ -324,23 +319,21 @@ const Index = () => {
               )}
               {selectedStyle && (
                 <>
-                  {isGeneratingRecipe && (
+                  {isGeneratingRecipe ? (
                     <div className="flex flex-col items-center justify-center h-64">
                       <LoaderCircle className="w-12 h-12 text-primary animate-spin" />
                       <p className="mt-4 text-secondary-foreground">Crafting your custom recipe...</p>
                     </div>
-                  )}
-                  {error && !isGeneratingRecipe && !vegetables.some(v => v.id === selectedVegetable?.id) && (
-                     <div className="flex flex-col items-center justify-center h-64 bg-destructive/10 rounded-lg p-4">
-                       <p className="text-destructive font-semibold">Oops! Something went wrong.</p>
-                       <p className="mt-2 text-sm text-destructive-foreground">{error}</p>
-                     </div>
-                  )}
-                  {!isGeneratingRecipe && (
-                    (vegetables.some(v => v.id === selectedVegetable.id) && selectedVegetable.recipe) 
-                    ? <RecipeDisplay recipe={selectedVegetable.recipe} onSpeak={handleSpeak} isSpeaking={isSpeaking} canSpeak={!!elevenLabsApiKey} />
-                    : generatedRecipe && <RecipeDisplay recipe={generatedRecipe} onSpeak={handleSpeak} isSpeaking={isSpeaking} canSpeak={!!elevenLabsApiKey} />
-                  )}
+                  ) : error ? (
+                    <div className="flex flex-col items-center justify-center h-64 bg-destructive/10 rounded-lg p-4">
+                      <p className="text-destructive font-semibold">Oops! Something went wrong.</p>
+                      <p className="mt-2 text-sm text-destructive-foreground">{error}</p>
+                    </div>
+                  ) : generatedRecipe ? (
+                    <RecipeDisplay recipe={generatedRecipe} onSpeak={handleSpeak} isSpeaking={isSpeaking} canSpeak={!!elevenLabsApiKey} />
+                  ) : (vegetables.some(v => v.id === selectedVegetable.id) && selectedVegetable.recipe) ? (
+                     <RecipeDisplay recipe={selectedVegetable.recipe} onSpeak={handleSpeak} isSpeaking={isSpeaking} canSpeak={!!elevenLabsApiKey} />
+                  ) : null}
                 </>
               )}
               
