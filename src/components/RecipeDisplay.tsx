@@ -1,13 +1,5 @@
-
 import { motion } from 'framer-motion';
-import { ChefHat } from 'lucide-react';
-
-interface Recipe {
-  dish: string;
-  description: string;
-  ingredients: string[];
-  instructions: string[];
-}
+import type { Recipe } from '@/types';
 
 interface RecipeDisplayProps {
   recipe: Recipe;

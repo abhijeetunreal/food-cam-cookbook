@@ -1,3 +1,4 @@
+import type { Recipe } from '@/types';
 
 export async function suggestRecipeStyles(vegetableName: string, apiKey: string): Promise<string[]> {
   const prompt = `You are a creative chef. Suggest 4 diverse and interesting cooking styles for a recipe using ${vegetableName}. Examples: Indian, Mexican, Italian, Thai, Fusion, etc. Your response should be a comma-separated list of just the style names, nothing else. For example: "Indian, Mexican, Italian, Thai"`;
@@ -31,6 +32,50 @@ export async function suggestRecipeStyles(vegetableName: string, apiKey: string)
     }
     throw new Error('Could not get recipe styles. Please check your API key and network connection.');
   }
+}
+
+export async function generateRecipe(vegetableName: string, style: string, apiKey: string): Promise<Recipe> {
+    const prompt = `You are a creative chef. Generate a recipe for a dish using ${vegetableName} in a ${style} style.
+Your response must be a JSON object with the following structure and no other text or markdown formatting like \`\`\`json. Just the raw JSON object.
+{
+  "dish": "Dish Name",
+  "description": "A short, appealing description of the dish.",
+  "ingredients": ["1 cup of ingredient A", "2 tbsp of ingredient B"],
+  "instructions": ["Step 1...", "Step 2..."]
+}`;
+
+    const body = {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+            "responseMimeType": "application/json",
+        },
+    };
+
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error("Gemini API error (generateRecipe):", errorData);
+            throw new Error(errorData.error?.message || 'Failed to generate recipe from Gemini API.');
+        }
+
+        const data = await response.json();
+        const recipeJsonString = data.candidates[0].content.parts[0].text;
+        const recipe = JSON.parse(recipeJsonString);
+        return recipe;
+
+    } catch (error) {
+        console.error('Error generating recipe:', error);
+        if (error instanceof Error) {
+            throw new Error(`Could not generate recipe. ${error.message}`);
+        }
+        throw new Error('Could not generate recipe. Please check your API key and network connection.');
+    }
 }
 
 export async function identifyIngredientFromImage(base64Image: string, apiKey: string): Promise<string> {

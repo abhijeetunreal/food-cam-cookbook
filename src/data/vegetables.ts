@@ -1,17 +1,5 @@
-
-import { LucideIcon, Carrot, Grape, Circle } from 'lucide-react';
-
-export interface Vegetable {
-  id: string;
-  name: string;
-  icon: LucideIcon;
-  recipe: {
-    dish: string;
-    description: string;
-    ingredients: string[];
-    instructions: string[];
-  };
-}
+import { Carrot, Grape, Circle } from 'lucide-react';
+import type { Vegetable } from '@/types';
 
 export const vegetables: Vegetable[] = [
   {
