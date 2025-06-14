@@ -3,7 +3,7 @@ export async function suggestRecipeStyles(vegetableName: string, apiKey: string)
   const prompt = `You are a creative chef. Suggest 4 diverse and interesting cooking styles for a recipe using ${vegetableName}. Examples: Indian, Mexican, Italian, Thai, Fusion, etc. Your response should be a comma-separated list of just the style names, nothing else. For example: "Indian, Mexican, Italian, Thai"`;
 
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
