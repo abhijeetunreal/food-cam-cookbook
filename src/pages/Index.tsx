@@ -7,12 +7,22 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { suggestRecipeStyles, generateRecipe } from "@/lib/gemini";
+import { generateSpeech } from "@/lib/elevenlabs";
 import { Button } from '@/components/ui/button';
 import { CameraScanner } from '@/components/CameraScanner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const languages = [
+  { value: 'English', label: 'English' },
+  { value: 'Hindi', label: 'Hindi' },
+  { value: 'Italian', label: 'Italian' },
+  { value: 'Japanese', label: 'Japanese' },
+];
 
 const Index = () => {
   const [selectedVegetable, setSelectedVegetable] = useState<Vegetable | null>(null);
   const [apiKey, setApiKey] = useState('');
+  const [elevenLabsApiKey, setElevenLabsApiKey] = useState('');
   const [recipeStyles, setRecipeStyles] = useState<string[]>([]);
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -20,11 +30,17 @@ const Index = () => {
   const [showCamera, setShowCamera] = useState(false);
   const [isGeneratingRecipe, setIsGeneratingRecipe] = useState(false);
   const [generatedRecipe, setGeneratedRecipe] = useState<Recipe | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState(languages[0].value);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   useEffect(() => {
     const storedApiKey = localStorage.getItem('gemini-api-key');
     if (storedApiKey) {
       setApiKey(storedApiKey);
+    }
+    const storedElevenLabsKey = localStorage.getItem('elevenlabs-api-key');
+    if (storedElevenLabsKey) {
+        setElevenLabsApiKey(storedElevenLabsKey);
     }
   }, []);
 
@@ -32,6 +48,12 @@ const Index = () => {
     const newKey = e.target.value;
     setApiKey(newKey);
     localStorage.setItem('gemini-api-key', newKey);
+  };
+
+  const handleElevenLabsApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newKey = e.target.value;
+    setElevenLabsApiKey(newKey);
+    localStorage.setItem('elevenlabs-api-key', newKey);
   };
 
   const handleSelectVegetable = async (veg: Vegetable) => {
@@ -49,7 +71,7 @@ const Index = () => {
 
     setIsLoading(true);
     try {
-      const styles = await suggestRecipeStyles(veg.name, apiKey);
+      const styles = await suggestRecipeStyles(veg.name, apiKey, selectedLanguage);
       setRecipeStyles(styles);
     } catch (err: any) {
       setError(err.message || 'An unknown error occurred.');
@@ -107,13 +129,35 @@ const Index = () => {
       setIsGeneratingRecipe(true);
       setGeneratedRecipe(null);
       try {
-        const recipe = await generateRecipe(selectedVegetable.name, style, apiKey);
+        const recipe = await generateRecipe(selectedVegetable.name, style, apiKey, selectedLanguage);
         setGeneratedRecipe(recipe);
       } catch (err: any) {
         setError(err.message || "Failed to generate recipe.");
       } finally {
         setIsGeneratingRecipe(false);
       }
+    }
+  };
+
+  const handleSpeak = async (text: string) => {
+    if (!elevenLabsApiKey) {
+      setError("An ElevenLabs API key is required for Text-to-Speech.");
+      return;
+    }
+    setIsSpeaking(true);
+    setError(null);
+    try {
+      const audioBlob = await generateSpeech(text, elevenLabsApiKey);
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      audio.play();
+      audio.onended = () => {
+        setIsSpeaking(false);
+        URL.revokeObjectURL(audioUrl);
+      };
+    } catch (err: any) {
+      setError(err.message || "Failed to generate speech.");
+      setIsSpeaking(false);
     }
   };
 
@@ -197,17 +241,44 @@ const Index = () => {
                 </Button>
               </motion.div>
 
-              <div className="mt-8 max-w-sm mx-auto">
-                <Label htmlFor="api-key" className="text-sm font-medium text-gray-600">Google Gemini API Key</Label>
-                <Input
-                  id="api-key"
-                  type="password"
-                  placeholder="Enter your API key here"
-                  value={apiKey}
-                  onChange={handleApiKeyChange}
-                  className="mt-2"
-                />
-                <p className="text-xs text-muted-foreground mt-2">Your key is stored locally and used to suggest recipe styles.</p>
+              <div className="mt-8 max-w-sm mx-auto space-y-6">
+                 <div>
+                    <Label htmlFor="language-select" className="text-sm font-medium text-gray-600">Recipe Language</Label>
+                    <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+                      <SelectTrigger id="language-select" className="mt-2">
+                        <SelectValue placeholder="Select a language" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {languages.map(lang => (
+                          <SelectItem key={lang.value} value={lang.value}>{lang.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                 </div>
+                <div>
+                  <Label htmlFor="api-key" className="text-sm font-medium text-gray-600">Google Gemini API Key</Label>
+                  <Input
+                    id="api-key"
+                    type="password"
+                    placeholder="Enter your API key here"
+                    value={apiKey}
+                    onChange={handleApiKeyChange}
+                    className="mt-2"
+                  />
+                  <p className="text-xs text-muted-foreground mt-2">Your key is stored locally and used to suggest recipe styles.</p>
+                </div>
+                <div>
+                  <Label htmlFor="elevenlabs-api-key" className="text-sm font-medium text-gray-600">ElevenLabs API Key</Label>
+                  <Input
+                    id="elevenlabs-api-key"
+                    type="password"
+                    placeholder="For text-to-speech feature"
+                    value={elevenLabsApiKey}
+                    onChange={handleElevenLabsApiKeyChange}
+                    className="mt-2"
+                  />
+                  <p className="text-xs text-muted-foreground mt-2">Your key is stored locally to enable voice features.</p>
+                </div>
               </div>
             </motion.div>
           ) : (
@@ -267,8 +338,8 @@ const Index = () => {
                   )}
                   {!isGeneratingRecipe && (
                     (vegetables.some(v => v.id === selectedVegetable.id) && selectedVegetable.recipe) 
-                    ? <RecipeDisplay recipe={selectedVegetable.recipe} />
-                    : generatedRecipe && <RecipeDisplay recipe={generatedRecipe} />
+                    ? <RecipeDisplay recipe={selectedVegetable.recipe} onSpeak={handleSpeak} isSpeaking={isSpeaking} canSpeak={!!elevenLabsApiKey} />
+                    : generatedRecipe && <RecipeDisplay recipe={generatedRecipe} onSpeak={handleSpeak} isSpeaking={isSpeaking} canSpeak={!!elevenLabsApiKey} />
                   )}
                 </>
               )}

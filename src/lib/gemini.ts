@@ -1,7 +1,7 @@
 import type { Recipe } from '@/types';
 
-export async function suggestRecipeStyles(vegetableName: string, apiKey: string): Promise<string[]> {
-  const prompt = `You are a creative chef. Suggest 4 diverse and interesting cooking styles for a recipe using ${vegetableName}. Examples: Indian, Mexican, Italian, Thai, Fusion, etc. Your response should be a comma-separated list of just the style names, nothing else. For example: "Indian, Mexican, Italian, Thai"`;
+export async function suggestRecipeStyles(vegetableName: string, apiKey: string, language: string): Promise<string[]> {
+  const prompt = `You are a creative chef. Suggest 4 diverse and interesting cooking styles for a recipe using ${vegetableName}, in ${language}. Examples: Indian, Mexican, Italian, Thai, Fusion, etc. Your response should be a comma-separated list of just the style names in ${language}, nothing else. For example: "Indian, Mexican, Italian, Thai"`;
 
   try {
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`, {
@@ -34,8 +34,8 @@ export async function suggestRecipeStyles(vegetableName: string, apiKey: string)
   }
 }
 
-export async function generateRecipe(vegetableName: string, style: string, apiKey: string): Promise<Recipe> {
-    const prompt = `You are a creative chef. Generate a recipe for a dish using ${vegetableName} in a ${style} style.
+export async function generateRecipe(vegetableName: string, style: string, apiKey: string, language: string): Promise<Recipe> {
+    const prompt = `You are a creative chef. Generate a recipe for a dish using ${vegetableName} in a ${style} style. The entire response, including dish name, description, ingredients and instructions, must be in the ${language} language.
 Your response must be a JSON object with the following structure and no other text or markdown formatting like \`\`\`json. Just the raw JSON object.
 {
   "dish": "Dish Name",
